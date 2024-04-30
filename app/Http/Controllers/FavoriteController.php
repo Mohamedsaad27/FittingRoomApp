@@ -51,4 +51,19 @@ class FavoriteController extends Controller
         }
     }
 
+    public function deleteFavoriteProducts(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            $favoriteProduct = $user->favorites()->where('product_id', $id)->first();
+            if (!$favoriteProduct) {
+                throw new \Exception('Favorite product not found');
+            }
+            $favoriteProduct->delete();
+            return response()->json(['message' => 'Favorite product deleted successfully'], 200);
+        } catch (\Exception $exception) {
+            return response()->json(['error' => $exception->getMessage()], 500);
+        }
+    }
+
 }

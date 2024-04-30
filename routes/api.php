@@ -49,6 +49,10 @@ Route::get('/favorite-products',[FavoriteController::class,'getFavoriteProducts'
         ->middleware('verify.token'); // Get ALL Favorite Products For Logged User
 Route::post('/add-favorite-products',[FavoriteController::class,'storeFavoriteProducts'])
     ->middleware('verify.token'); // Store Favorite Products For Logged User
+
+Route::post('/delete-favorite-products/{id}',[FavoriteController::class,'deleteFavoriteProducts'])
+    ->middleware('verify.token');
+
 // Popular Products on Home Page
 Route::get('display-popular-product',[ProductController::class,'displayPopularProduct'])
                 ->middleware('verify.token');
