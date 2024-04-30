@@ -41,11 +41,12 @@ class ProductController extends Controller
                 return $this->errorResponse($validator->errors(), 422);
             }
             $image = $request->file('image');
-            $imagePath = $image->store('products', 'public');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->storeAs('public/products', $imageName); // Store image in the 'public' disk under 'products' directory
             $product = Product::create([
                 'name' => $request->name,
                 'description' => $request->description,
-                'image' => $imagePath,
+                'image' => url('storage/products/' . $imageName), // Construct the full URL path
                 'price' => $request->price,
                 'color' => $request->color,
                 'size' => $request->size,
@@ -59,6 +60,7 @@ class ProductController extends Controller
             return $this->errorResponse($exception->getMessage(), 500);
         }
     }
+
 
     public function edit(Request $request, $id)
     {
