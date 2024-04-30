@@ -50,7 +50,6 @@ class CategoryController extends Controller
         }
     }
 
-
     public function edit(Request $request, $id)
     {
         try {

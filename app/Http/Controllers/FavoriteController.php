@@ -16,7 +16,8 @@ class FavoriteController extends Controller
     {
         try {
             $userId = auth()->id();
-            $favoriteProducts = Favorite::where('user_id', $userId)->get();
+            $favoriteProducts = Favorite::with('product')
+            ->where('user_id', $userId)->get();
             if ($favoriteProducts->isEmpty()) {
                 return $this->errorResponse('No Favorite Products', 404);
             }

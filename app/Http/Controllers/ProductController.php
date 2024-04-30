@@ -41,12 +41,11 @@ class ProductController extends Controller
                 return $this->errorResponse($validator->errors(), 422);
             }
             $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->storeAs('products', $imageName);
+            $imagePath = $image->store('products', 'public');
             $product = Product::create([
                 'name' => $request->name,
                 'description' => $request->description,
-                'image' => $imageName,
+                'image' => $imagePath,
                 'price' => $request->price,
                 'color' => $request->color,
                 'size' => $request->size,
