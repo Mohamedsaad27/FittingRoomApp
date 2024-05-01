@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -23,39 +25,34 @@ class UserController extends Controller
     public function editProfileData(Request $request)
     {
         try {
-            $user = auth()->user();
+            $user = auth()->user(); // Get the authenticated user
 
+            // Validate the request data
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
+                'email' => 'nullable|string|email|max:255|unique:users,email,'.$user->id,
+                'password' => 'nullable|string|min:8',
             ]);
 
-            $user->update([
-                'name' => $validatedData['name'],
-            ]);
+            // Update user's name
+            $user->name = $validatedData['name'];
 
-            if ($request->has('email')) {
-                $validatedData = $request->validate([
-                    'email' => 'required|email|unique:users,email,' . $user->id,
-                ]);
+            // Update user's email
+            $user->email = $validatedData['email'];
 
-                $user->update([
-                    'email' => $validatedData['email'],
-                ]);
+            // Update user's password if provided
+            if (isset($validatedData['password'])) {
+                $user->password = Hash::make($validatedData['password']);
             }
 
-            if ($request->has('password')) {
-                $validatedData = $request->validate([
-                    'password' => 'required|string|min:8',
-                ]);
+            // Save the changes
+            $user->save();
 
-                $user->update([
-                    'password' => bcrypt($validatedData['password']),
-                ]);
-            }
-
-            return $this->successResponse($user, 'Profile updated successfully', 200);
+            return response()->json([$user,'message' => 'Profile updated successfully'], 200);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => $e->validator->errors()->first()], 422);
         } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage(), 500);
+            return response()->json(['message' => 'Failed to update profile.'], 500);
         }
     }
 }

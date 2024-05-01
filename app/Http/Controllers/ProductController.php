@@ -15,11 +15,27 @@ class ProductController extends Controller
     public function index()
     {
         try {
-            $product = Product::all();
-            if (!$product) {
-                return $this->errorResponse('No Products Founded', 404);
+            // Retrieve the authenticated user
+            $user = auth()->user();
+
+            // Retrieve all products and eager load the favorites relationship
+            $products = Product::with(['favorites' => function ($query) use ($user) {
+                // If user is authenticated, filter favorites by user ID
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                }
+            }])->get();
+
+            if ($products->isEmpty()) {
+                return $this->errorResponse('No Products Found', 404);
             }
-            return $this->successResponse($product, null, 200);
+
+            // Add 'is_favorite' attribute to each product indicating if it's favorited by the user
+            $products->each(function ($product) {
+                $product->is_favorite = $product->favorites->isNotEmpty();
+            });
+
+            return $this->successResponse($products, null, 200);
         } catch (\Exception $exception) {
             return $this->errorResponse($exception->getMessage(), 500);
         }
