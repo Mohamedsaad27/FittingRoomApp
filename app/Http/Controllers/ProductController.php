@@ -20,7 +20,6 @@ class ProductController extends Controller
 
             // Retrieve all products and eager load the favorites relationship
             $products = Product::with(['favorites' => function ($query) use ($user) {
-                // If user is authenticated, filter favorites by user ID
                 if ($user) {
                     $query->where('user_id', $user->id);
                 }
@@ -33,6 +32,7 @@ class ProductController extends Controller
             // Add 'is_favorite' attribute to each product indicating if it's favorited by the user
             $products->each(function ($product) {
                 $product->is_favorite = $product->favorites->isNotEmpty();
+                unset($product->favorites);
             });
 
             return $this->successResponse($products, null, 200);
@@ -156,24 +156,50 @@ class ProductController extends Controller
 
     public function displayPopularProduct()
     {
+        $user = auth()->user();
         try {
-            $popularProducts = Product::orderBy('sold_count', 'desc')->take(12)->get();
+            $popularProducts = Product::with(['favorites' => function ($query) use ($user) {
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                }
+            }])
+                ->orderBy('sold_count', 'desc')
+                ->take(12)
+                ->get();
+
             if ($popularProducts->isEmpty()) {
                 return $this->errorResponse('No Popular Products', 404);
             }
-            return $this->successResponse($popularProducts, null, 200);
 
+            $popularProducts->each(function ($product) use ($user) {
+                $product->is_favorite = $product->favorites->isNotEmpty() && $user ? true : false;
+                unset($product->favorites);
+            });
+
+            return $this->successResponse($popularProducts, null, 200);
         } catch (\Exception $exception) {
             return $this->errorResponse($exception->getMessage(), 500);
         }
     }
 
+
     public function getProductsByCategoryId(Request $request, $id)
     {
+        $user = auth()->user();
         try {
-            $products = Product::where('category_id', $id)
+            $products = Product::with(['favorites' => function ($query) use ($user) {
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                }
+            }])->where('category_id', $id)
                 ->with('category')
                 ->get();
+            // Add Attributes To Response
+            $products->each(function ($product) use ($user) {
+                $product->is_favorite = $product->favorites->isNotEmpty() && $user ? true : false;
+                unset($product->favorites);
+            });
+
             if ($products->isEmpty()) {
                 return $this->errorResponse('No Products For This Category', 404);
             }
@@ -185,9 +211,20 @@ class ProductController extends Controller
 
     public function getProductById(Request $request, $id)
     {
+        $user = auth()->user();
         try {
-            $product = Product::find($id);
-            if (!$product) {
+            $product = Product::with(['favorites'=>function($query) use ($user){
+                if($user){
+                    $query->where('user_id',$user->id);
+                }
+            }])->where('id',$id)
+                ->get();
+
+            $product->each(function ($product) use ($user) {
+                $product->is_favorite = $product->favorites->isNotEmpty() && $user ? true : false;
+//                unset($product->favorites);
+            });
+            if ($product->isEmpty()) {
                 return $this->errorResponse('Product not found', 404);
             }
             return $this->successResponse($product, 'Product Retrieved Successfully', 200);
@@ -201,15 +238,32 @@ class ProductController extends Controller
             $request->validate([
                 'query' => 'required|string|max:255',
             ]);
+
             $query = $request->input('query');
-            $products = Product::where('name', 'like', "%{$query}%")->get();
+            $user = auth()->user();
+
+            $products = Product::with(['favorites' => function ($query) use ($user) {
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                }
+            }])
+                ->where('name', 'like', "%{$query}%")
+                ->get();
+
             if ($products->isEmpty()) {
                 return $this->errorResponse('No products found', 404);
             }
+
+            $products->each(function ($product) use ($user) {
+                $product->is_favorite = $product->favorites->isNotEmpty() && $user ? true : false;
+                unset($product->favorites); // Removing favorites attribute
+            });
+
             return $this->successResponse($products, null, 200);
         } catch (\Exception $exception) {
             // Handle any exceptions
             return $this->errorResponse($exception->getMessage(), 500);
         }
     }
+
 }
